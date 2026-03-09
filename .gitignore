@@ -1,4 +1,4 @@
- gpt_env/
+gpt_env/
 __pycache__/
 *.pyc
 .env
