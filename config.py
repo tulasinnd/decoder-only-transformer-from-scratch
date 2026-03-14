@@ -9,3 +9,4 @@ batch_size=16
 num_steps = 200     # 3000    # training iterations
 print_every = 200       # logging frequency
 learning_rate = 3e-4 
+eval_iters=100

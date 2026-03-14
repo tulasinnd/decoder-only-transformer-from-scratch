@@ -1,13 +1,14 @@
 import torch
 from model.decoder import Decoder
 from config import *
-from data.dataset import load_training_data, get_vocab_size,tokenizer
+from data.dataset import load_training_data,load_validation_data,get_vocab_size,tokenizer
 from training.trainer import train
 from generation.generate import generate
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # load dataset
 tokenized_train_text = load_training_data()
+tokenized_validation_text=load_validation_data()
 
 # build model
 vocab_size = get_vocab_size()
@@ -17,7 +18,7 @@ model = model.to(device)
 # training
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate) # create optimizer
 criterion = torch.nn.CrossEntropyLoss() # create loss function
-train(model, optimizer, criterion, tokenized_train_text, device) # call training loop
+train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,eval_iters)  # call training loop
 
 # generation (later implement generate text without training)
 start_text = input("Enter starting text: ")

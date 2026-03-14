@@ -4,11 +4,10 @@ from transformers import GPT2TokenizerFast
 
 # BPE tokenizer
 tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+corpus = load_dataset("wikitext", "wikitext-2-raw-v1") # dataset contains train, test, validate, text rows
 
 # tokenize and convert text to stream of token IDs
 def load_training_data():
-
-    corpus = load_dataset("wikitext", "wikitext-2-raw-v1") # dataset contains train, test, validate, text rows
     texts = [row["text"] for row in corpus["train"]] # list of all text rows
     full_train_text = "\n".join(texts) # join all the text
 
@@ -20,6 +19,19 @@ def load_training_data():
     tokenized_train_text = torch.tensor(enc["input_ids"]) # tokenize entire text, torch.Size([2403644])
     
     return tokenized_train_text
+
+def load_validation_data():
+    texts = [row["text"] for row in corpus["validation"]] # list of all text rows
+    full_validation_text = "\n".join(texts) # join all the text
+
+    enc = tokenizer(
+        full_validation_text,
+        add_special_tokens=False
+    ) 
+
+    tokenized_validation_text = torch.tensor(enc["input_ids"]) # tokenize entire text, torch.Size([2403644])
+    
+    return tokenized_validation_text
 
 # code for creating batches for training or validation
 def get_batch(tokens, batch_size, block_size, device): 
