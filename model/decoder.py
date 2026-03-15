@@ -129,31 +129,38 @@ class DecoderLayer(nn.Module):
         self.ffn = FFN(d_model)
         self.ln2 = LN(d_model)
 
-    def forward(self, X, return_states=False,padding_mask=None):
+    def forward(self, X, return_states=False,padding_mask=None,post_norm=False):
         states = {} if return_states else None
 
-        # self-attention block followed by residual connection and layer normalization
-        mha_x = self.mha(X,padding_mask=padding_mask) 
-        res1 = mha_x + X
-        ln1_x = self.ln1(res1)
+        if post_norm:
+            # post-norm
+            mha_x = self.mha(X, padding_mask=padding_mask)
+            res1 = X + mha_x
+            ln1_x = self.ln1(res1)
 
-        # feed-forward block followed by residual connection and layer normalization
-        ffn_x = self.ffn(ln1_x)
-        res2 = ln1_x + ffn_x
-        ln2_x = self.ln2(res2)
+            ffn_x = self.ffn(ln1_x)
+            res2 = ln1_x + ffn_x
+            layer_output = self.ln2(res2)
+
+        else:
+            # pre-norm
+            norm_X1 = self.ln1(X)
+            mha_x = self.mha(norm_X1, padding_mask=padding_mask)
+            res1 = X + mha_x
+
+            norm_X2 = self.ln2(res1)
+            ffn_x = self.ffn(norm_X2)
+            layer_output = res1 + ffn_x
 
         # optionally return intermediate states for analysis or visualization
         if return_states: 
-            states["mha_x"] = mha_x.detach()
-            states["res1"] = res1.detach()
-            states["ln1_x"] = ln1_x.detach()
-            states["ffn_x"] = ffn_x.detach()
-            states["res2"] = res2.detach()
-            states["ln2_x"] = ln2_x.detach()
+            states["mha_output"] = mha_x.detach()
+            states["ffn_output"] = ffn_x.detach()
+            states["layer_output"] = layer_output.detach()
 
-            return ln2_x, states
+            return layer_output, states
 
-        return ln2_x
+        return layer_output
 
 # stacking multiple decoder layers
 class Decoder(nn.Module):
@@ -166,7 +173,7 @@ class Decoder(nn.Module):
         self.layers = nn.ModuleList([DecoderLayer(d_model, num_heads) for _ in range(num_layers)]) # stack decoder layers
         self.logit = Logit(d_model, vocab_size)
 
-    def forward(self, input_ids, return_states=False, padding_mask=None):
+    def forward(self, input_ids, return_states=False, padding_mask=None,post_norm=False):
         states = {} if return_states else None
 
         emb = self.token_embedding(input_ids)           # lookup token embeddings
@@ -178,10 +185,10 @@ class Decoder(nn.Module):
 
         for i, layer in enumerate(self.layers):         # pass representations through stacked decoder layers
             if return_states:
-                x, layer_states = layer(x, return_states=True,padding_mask=padding_mask,)
+                x, layer_states = layer(x, return_states=True,padding_mask=padding_mask,post_norm=post_norm)
                 states[f"layer_{i}"] = layer_states
             else:
-                x = layer(x,padding_mask=padding_mask)
+                x = layer(x,padding_mask=padding_mask,post_norm=post_norm)
 
         logits = self.logit(x)                          # compute final logits
 
