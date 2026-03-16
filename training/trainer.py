@@ -62,7 +62,8 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
             print(f"Valid Loss: {loss:.4f} | Validation PPL: {ppl_eval:.2f}")
             total_loss = 0.0
 
-            if loss < best_val_loss:
-                best_val_loss = loss
-                torch.save(model.state_dict(), "checkpoints/best_model.pt")
-                print(f"Best model updated! at validation loss: {best_val_loss:.4f}")
+            # checkpointing the best model with lowest validation loss
+            # if loss < best_val_loss:
+            #     best_val_loss = loss
+                # torch.save(model.state_dict(), "checkpoints/best_model.pt")
+                # print(f"Best model updated! at validation loss: {best_val_loss:.4f}")

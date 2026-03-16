@@ -1,6 +1,7 @@
 from config import *
 import torch
-torch.manual_seed(42)
+from utils.utils import set_seed
+set_seed(seed)
 
 @torch.no_grad()
 def generate(model, start_ids, max_new_tokens=10,temperature=temperature):
