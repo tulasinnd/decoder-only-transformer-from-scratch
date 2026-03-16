@@ -1,10 +1,38 @@
 from config import *
 import torch
+import torch.nn.functional as F
 from utils.utils import set_seed
 set_seed(seed)
 
+def sample_top_k(logits, top_k=50):
+    topk_vals, topk_indices = torch.topk(logits, top_k)
+    probs = F.softmax(topk_vals, dim=-1) # ignore all the other tokens except topk
+
+    next_token = torch.multinomial(probs, 1) # pick one from that
+    next_token = topk_indices.gather(-1, next_token) # From topk_indices, pick elements at positions specified in next_token, along last dimension. 
+
+    return next_token
+
+def sample_top_p(logits, top_p=0.7):
+    probs = F.softmax(logits, dim=-1) # Convert logits → probabilities    
+    sorted_probs, sorted_indices = torch.sort(probs, descending=True) # sort probabilities (descending)
+    cumulative_probs = torch.cumsum(sorted_probs, dim=-1) # compute cumulative probabilities
+    sorted_indices_to_remove = cumulative_probs > top_p # create mask: remove tokens where cumulative prob exceeds top_p
+    sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()     # shift mask right so we always keep at least 1 token
+    sorted_indices_to_remove[..., 0] = False
+    sorted_probs[sorted_indices_to_remove] = 0.0     # zero out removed probabilities
+    sorted_probs = sorted_probs / sorted_probs.sum(dim=-1, keepdim=True)     # renormalize remaining probabilities
+
+    next_token = torch.multinomial(sorted_probs, 1)     # sample from filtered distribution
+    next_token = sorted_indices.gather(-1, next_token)     # map back to original vocab indices
+
+    return next_token 
+
 @torch.no_grad()
-def generate(model, start_ids, max_new_tokens=10,temperature=temperature):
+def generate(model, start_ids, max_new_tokens=10,temperature=temperature,top_k=None,top_p=None):
+    if top_k is not None and top_p is not None:
+        raise ValueError("Choose either top_k or top_p, not both.")
+    
     model.eval()
     ids = start_ids.clone()
 
@@ -16,11 +44,20 @@ def generate(model, start_ids, max_new_tokens=10,temperature=temperature):
         next_logits = logits[:, -1, :]      # last token
         
         if temperature == 0:
-            next_id = torch.argmax(next_logits, dim=-1, keepdim=True)
+            next_id = torch.argmax(next_logits, dim=-1, keepdim=True) # greedy decoding when temp=0
+
         else:
-            scaled_logits = next_logits / temperature
-            probs = torch.softmax(scaled_logits, dim=-1)
-            next_id = torch.multinomial(probs, num_samples=1)
+            scaled_logits = next_logits / temperature # temperature sampling applied
+
+            if top_k is not None:
+                next_id = sample_top_k(scaled_logits, top_k) # use either top_k or top_p,
+
+            elif top_p is not None:
+                next_id = sample_top_p(scaled_logits, top_p)
+
+            else:
+                probs = F.softmax(scaled_logits, dim=-1) # temperature sampling over full vocabulary
+                next_id = torch.multinomial(probs, 1)
 
         ids = torch.cat([ids, next_id], dim=1)
 

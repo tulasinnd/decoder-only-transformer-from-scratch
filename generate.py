@@ -17,5 +17,5 @@ model.eval()
 
 # generation 
 input_ids, prompt= get_input_ids(tokenizer, device, seq_len)
-gen_ids = generate(model, input_ids,max_new_tokens, temperature=0.5) 
+gen_ids = generate(model, input_ids,max_new_tokens, temperature=0.5, top_p=0.9) 
 print_generation(tokenizer, gen_ids, prompt)

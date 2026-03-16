@@ -24,5 +24,5 @@ train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_te
 
 # generation 
 input_ids, prompt= get_input_ids(tokenizer, device, seq_len)
-gen_ids = generate(model, input_ids,max_new_tokens, temperature) 
+gen_ids = generate(model, input_ids,max_new_tokens, temperature, top_p=0.8) 
 print_generation(tokenizer, gen_ids, prompt)
