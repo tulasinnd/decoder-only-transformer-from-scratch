@@ -25,3 +25,19 @@ def generate(model, start_ids, max_new_tokens=10,temperature=temperature):
         ids = torch.cat([ids, next_id], dim=1)
 
     return ids
+
+def get_input_ids(tokenizer, device, seq_len):    
+
+    prompt = input("Enter prompt text: ").strip() # Ask the user for a non-empty prompt
+    while not prompt:
+        prompt = input("Prompt cannot be empty. Enter prompt text: ").strip()
+
+    input_ids = tokenizer(prompt, return_tensors="pt")["input_ids"].to(device) #  tokenize the prompt
+    input_ids = input_ids[:, -seq_len:] # truncate the extra prompt safely.
+    
+    return input_ids, prompt
+
+def print_generation(tokenizer, output_ids, prompt):
+    text = tokenizer.decode(output_ids[0].tolist(), skip_special_tokens=True) # convert generated ids to text
+    print("Prompt:", prompt)
+    print("Generated:", text)

@@ -3,7 +3,7 @@ from model.decoder import Decoder
 from config import *
 from data.dataset import load_training_data,load_validation_data,get_vocab_size,tokenizer
 from training.trainer import train
-from generation.generation_utils import generate
+from generation.generation_utils import generate,get_input_ids,print_generation
 from utils.utils import set_seed,get_device
 set_seed(seed)
 device = get_device()
@@ -23,10 +23,6 @@ criterion = torch.nn.CrossEntropyLoss() # create loss function
 train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,eval_iters)  # call training loop
 
 # generation 
-start_text = input("Enter starting text: ")
-start_ids = tokenizer(start_text, return_tensors="pt")["input_ids"].to(device)
-start_ids = start_ids[:, -seq_len:]   # safe truncation
-gen_ids = generate(model, start_ids,max_new_tokens, temperature) 
-text = tokenizer.decode(gen_ids[0].tolist(), skip_special_tokens=True)
-print("Prompt:", start_text)
-print("Generated:", text)
+input_ids, prompt= get_input_ids(tokenizer, device, seq_len)
+gen_ids = generate(model, input_ids,max_new_tokens, temperature) 
+print_generation(tokenizer, gen_ids, prompt)
