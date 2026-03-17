@@ -24,8 +24,7 @@ class Embeddings(nn.Module):
         self.embedding= nn.Embedding(vocab_size,d_model)
 
     def forward(self, x_batch):
-        x_emb=self.embedding(x_batch)
-        return x_emb
+        return self.embedding(x_batch)
 
 # IN: input tensor used only to infer batch and sequence length
 # OUT: learned positional embeddings for each token position
@@ -118,7 +117,7 @@ class FFN(nn.Module):
 class Logit(nn.Module): 
     def __init__(self, d_model, vocab_size): 
         super().__init__()
-        self.linear = nn.Linear(d_model, vocab_size)
+        self.linear = nn.Linear(d_model, vocab_size, bias=False)
  
     def forward(self, x):
         return self.linear(x)   # logits
@@ -168,32 +167,45 @@ class DecoderLayer(nn.Module):
 
 # stacking multiple decoder layers
 class Decoder(nn.Module):
-    def __init__(self, vocab_size, max_seq_len, d_model, num_heads, num_layers,dropout=None):
+    def __init__(self, vocab_size, max_seq_len, d_model, num_heads, num_layers, dropout=None,weight_tying=False):
         super().__init__()
 
+        self.d_model = d_model
         # load dropout values
         if dropout is None:
-            self.embedding_dropout = config.embedding_dropout # used after emb+pos
-            self.attention_dropout = config.attention_dropout # used inside MHA
-            self.residual_dropout = config.residual_dropout # used after MHA and FFN outputs
+            self.embedding_dropout = config.embedding_dropout
+            self.attention_dropout = config.attention_dropout
+            self.residual_dropout = config.residual_dropout
         else:
             self.embedding_dropout = dropout.get("embedding", config.embedding_dropout)
             self.attention_dropout = dropout.get("attention", config.attention_dropout)
             self.residual_dropout = dropout.get("residual", config.residual_dropout)
 
-        # full decoder architecture with specified number of layers
+        # embeddings
         self.token_embedding = Embeddings(vocab_size, d_model)
         self.positional_encoding = PositionalEncodings(max_seq_len, d_model)
+
+        # decoder stack
         self.layers = nn.ModuleList(
-            [DecoderLayer(d_model, num_heads, self.attention_dropout,self.residual_dropout) for _ in range(num_layers)]) # stack decoder layers
+            [DecoderLayer(d_model, num_heads, self.attention_dropout, self.residual_dropout)
+             for _ in range(num_layers)]
+        )
+
+        # output projection
         self.logit = Logit(d_model, vocab_size)
 
+        # optional weight tying
+        if weight_tying:
+            self.logit.linear.weight = self.token_embedding.embedding.weight
+            print(self.logit.linear.weight.data_ptr() == self.token_embedding.embedding.weight.data_ptr())
+
+        # embedding dropout
         self.embedding_dropout_layer = nn.Dropout(self.embedding_dropout)
 
     def forward(self, input_ids, return_states=False, padding_mask=None,post_norm=False):
         states = {} if return_states else None
 
-        emb = self.token_embedding(input_ids)           # lookup token embeddings
+        emb = self.token_embedding(input_ids)   # lookup token embeddings
         pos = self.positional_encoding(input_ids)       # add positional embeddings
         x = emb + pos
         x = self.embedding_dropout_layer(x)
