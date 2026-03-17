@@ -14,6 +14,7 @@ Components implemented:
 import torch
 import torch.nn as nn
 import math
+import config
 
 # IN: x (token IDs)
 # OUT: embedding vectors looked up from the vocabulary embedding table
@@ -47,8 +48,9 @@ class PositionalEncodings(nn.Module):
 # IN: input representations X
 # OUT: context-aware representations of X using causal self-attention
 class MHA(nn.Module):
-    def __init__(self, d_model, num_heads):
+    def __init__(self, d_model, num_heads,attention_dropout=0.0):
         super().__init__()
+        self.attn_dropout = nn.Dropout(attention_dropout)
         self.d_model= d_model
         self.num_heads = num_heads
         self.head_dim = d_model//num_heads
@@ -78,8 +80,9 @@ class MHA(nn.Module):
         scores = scores.masked_fill(causal_mask == 0, -1e9) 
         if padding_mask is not None: # optional padding mask to ignore padded tokens in attention
             mask = padding_mask.unsqueeze(1).unsqueeze(2).to(X.device)
-            scores = scores.masked_fill(mask == 0, -1e9) # mask padded tokens so they neither attend nor receive attention
+            scores = scores.masked_fill(mask == 0, float('-inf')) # mask padded tokens so they neither attend nor receive attention
         weights = torch.softmax(scores, dim= -1) # attention weights after softmax normalization
+        weights = self.attn_dropout(weights) # apply dropout
 
         out = torch.matmul(weights, V)
         out = out.transpose(1,2).reshape(batch, seq_len,d_model) # concatenate attention heads
@@ -122,35 +125,36 @@ class Logit(nn.Module):
     
 # create one full decoder layer
 class DecoderLayer(nn.Module):
-    def __init__(self, d_model, num_heads):
+    def __init__(self, d_model, num_heads,attention_dropout,residual_dropout):
         super().__init__()
-        self.mha = MHA(d_model, num_heads)
+        self.mha = MHA(d_model, num_heads,attention_dropout)
         self.ln1 = LN(d_model)
         self.ffn = FFN(d_model)
         self.ln2 = LN(d_model)
+
+        self.dropout1 = nn.Dropout(residual_dropout)
+        self.dropout2 = nn.Dropout(residual_dropout)
 
     def forward(self, X, return_states=False,padding_mask=None,post_norm=False):
         states = {} if return_states else None
 
         if post_norm:
-            # post-norm
             mha_x = self.mha(X, padding_mask=padding_mask)
-            res1 = X + mha_x
+            res1 = X + self.dropout1(mha_x)
             ln1_x = self.ln1(res1)
 
             ffn_x = self.ffn(ln1_x)
-            res2 = ln1_x + ffn_x
+            res2 = ln1_x + self.dropout2(ffn_x)
             layer_output = self.ln2(res2)
 
-        else:
-            # pre-norm
+        else:  # pre-norm
             norm_X1 = self.ln1(X)
             mha_x = self.mha(norm_X1, padding_mask=padding_mask)
-            res1 = X + mha_x
+            res1 = X + self.dropout1(mha_x)
 
             norm_X2 = self.ln2(res1)
             ffn_x = self.ffn(norm_X2)
-            layer_output = res1 + ffn_x
+            layer_output = res1 + self.dropout2(ffn_x)
 
         # optionally return intermediate states for analysis or visualization
         if return_states: 
@@ -164,21 +168,35 @@ class DecoderLayer(nn.Module):
 
 # stacking multiple decoder layers
 class Decoder(nn.Module):
-    def __init__(self, vocab_size, max_seq_len, d_model, num_heads, num_layers):
+    def __init__(self, vocab_size, max_seq_len, d_model, num_heads, num_layers,dropout=None):
         super().__init__()
+
+        # load dropout values
+        if dropout is None:
+            self.embedding_dropout = config.embedding_dropout # used after emb+pos
+            self.attention_dropout = config.attention_dropout # used inside MHA
+            self.residual_dropout = config.residual_dropout # used after MHA and FFN outputs
+        else:
+            self.embedding_dropout = dropout.get("embedding", config.embedding_dropout)
+            self.attention_dropout = dropout.get("attention", config.attention_dropout)
+            self.residual_dropout = dropout.get("residual", config.residual_dropout)
 
         # full decoder architecture with specified number of layers
         self.token_embedding = Embeddings(vocab_size, d_model)
         self.positional_encoding = PositionalEncodings(max_seq_len, d_model)
-        self.layers = nn.ModuleList([DecoderLayer(d_model, num_heads) for _ in range(num_layers)]) # stack decoder layers
+        self.layers = nn.ModuleList(
+            [DecoderLayer(d_model, num_heads, self.attention_dropout,self.residual_dropout) for _ in range(num_layers)]) # stack decoder layers
         self.logit = Logit(d_model, vocab_size)
+
+        self.embedding_dropout_layer = nn.Dropout(self.embedding_dropout)
 
     def forward(self, input_ids, return_states=False, padding_mask=None,post_norm=False):
         states = {} if return_states else None
 
         emb = self.token_embedding(input_ids)           # lookup token embeddings
         pos = self.positional_encoding(input_ids)       # add positional embeddings
-        x= emb+pos
+        x = emb + pos
+        x = self.embedding_dropout_layer(x)
 
         if return_states:
             states["x_embed"] = x.detach()

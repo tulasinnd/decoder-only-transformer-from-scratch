@@ -14,3 +14,8 @@ eval_iters=100
 temperature= 1.0
 max_new_tokens=20
 seed = 42
+
+# default dropout values
+embedding_dropout = 0.1     # used after emb+pos
+attention_dropout = 0.1     # used inside MHA
+residual_dropout = 0.1      # used after MHA and FFN outputs
