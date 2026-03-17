@@ -20,7 +20,7 @@ model = model.to(device)
 # training
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate) # create optimizer
 criterion = torch.nn.CrossEntropyLoss() # create loss function
-train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,eval_iters)  # call training loop
+train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,eval_iters,grad_clip=1.0)  # call training loop
 
 # generation 
 input_ids, prompt= get_input_ids(tokenizer, device, seq_len)

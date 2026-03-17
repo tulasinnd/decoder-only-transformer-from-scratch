@@ -23,10 +23,10 @@ def evaluate(model, tokenized_validation_text, criterion, device, batch_size, se
     return total_loss / eval_iters
 
 # train the decoder-only transformer on tokenized text data
-def train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,eval_iters):
+def train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,eval_iters, grad_clip=None):
     model.train()
     total_loss = 0.0
-    best_val_loss = float('inf')  # start with “infinite” loss for checkpoints
+    best_val_loss = float('inf')  # start with infinite loss for checkpoints
 
     for step in range(1, num_steps + 1):
 
@@ -45,6 +45,12 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
         # backpropagation and parameter update
         optimizer.zero_grad()
         loss.backward()
+
+        if grad_clip is not None:
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+        else:
+            grad_norm = 0.0
+
         optimizer.step()
 
         total_loss += loss.item()
@@ -54,16 +60,18 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
             avg_loss = total_loss / print_every
             ppl_train = math.exp(avg_loss)
 
-            loss = evaluate(model, tokenized_validation_text, criterion, device, batch_size, seq_len, eval_iters)
-            ppl_eval = math.exp(loss)
+            val_loss = evaluate(model, tokenized_validation_text, criterion, device, batch_size, seq_len, eval_iters)
+            ppl_eval = math.exp(val_loss)
+
+            grad_str = f"{grad_norm:.3f}" if grad_norm is not None else "None"
 
             print(f"Step {step}")
-            print(f"Train Loss: {avg_loss:.4f} | Train PPL: {ppl_train:.2f}")
-            print(f"Valid Loss: {loss:.4f} | Validation PPL: {ppl_eval:.2f}")
+            print(f"Train Loss: {avg_loss:.4f} | Train PPL: {ppl_train:.2f} | Grad Norm: {grad_str}")
+            print(f"Valid Loss: {val_loss:.4f} | Validation PPL: {ppl_eval:.2f}")
             total_loss = 0.0
 
             # checkpointing the best model with lowest validation loss
-            # if loss < best_val_loss:
-            #     best_val_loss = loss
+            # if val_loss < best_val_loss:
+            #     best_val_loss = val_loss
                 # torch.save(model.state_dict(), "checkpoints/best_model.pt")
                 # print(f"Best model updated! at validation loss: {best_val_loss:.4f}")
