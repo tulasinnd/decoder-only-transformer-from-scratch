@@ -22,13 +22,29 @@ def evaluate(model, tokenized_validation_text, criterion, device, batch_size, se
     model.train()  # back to training mode
     return total_loss / eval_iters
 
+def get_lr(step, warmup_steps, total_steps, base_lr):
+
+    # warmup
+    if step < warmup_steps:
+        return base_lr * (step / warmup_steps)
+
+    # cosine decay
+    progress = (step - warmup_steps) / max(1, (total_steps - warmup_steps))
+    return base_lr * 0.5 * (1 + math.cos(math.pi * min(progress, 1.0)))
+
 # train the decoder-only transformer on tokenized text data
 def train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,eval_iters, grad_clip=None):
     model.train()
     total_loss = 0.0
     best_val_loss = float('inf')  # start with infinite loss for checkpoints
+    warmup_steps = max(100, int(0.05 * num_steps))
 
     for step in range(1, num_steps + 1):
+
+        # update learning rate
+        lr = get_lr(step, warmup_steps, num_steps, learning_rate)
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = lr
 
         # sample a training batch
         X, Y = get_batch(tokenized_train_text, batch_size, seq_len, device=device)
@@ -63,10 +79,9 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
             val_loss = evaluate(model, tokenized_validation_text, criterion, device, batch_size, seq_len, eval_iters)
             ppl_eval = math.exp(val_loss)
 
-            grad_str = f"{grad_norm:.3f}" if grad_norm is not None else "None"
-
             print(f"Step {step}")
-            print(f"Train Loss: {avg_loss:.4f} | Train PPL: {ppl_train:.2f} | Grad Norm: {grad_str}")
+            print(f"LR: {lr:.6f}")
+            print(f"Train Loss: {avg_loss:.4f} | Train PPL: {ppl_train:.2f} | Grad Norm: {grad_norm}") # log this for plotting
             print(f"Valid Loss: {val_loss:.4f} | Validation PPL: {ppl_eval:.2f}")
             total_loss = 0.0
 

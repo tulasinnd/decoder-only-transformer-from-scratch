@@ -1,8 +1,8 @@
 from config import *
 import torch
 import torch.nn.functional as F
-from utils.utils import set_seed
-set_seed(seed)
+# from utils.utils import set_seed
+# set_seed(seed)
 
 def sample_top_k(logits, top_k=50):
     topk_vals, topk_indices = torch.topk(logits, top_k)

@@ -16,7 +16,9 @@ dropout_config = {
 # load model from checkpoint
 vocab_size = get_vocab_size()
 model = Decoder(vocab_size, max_seq_len, d_model, num_heads, num_layers,dropout=dropout_config)
-model.load_state_dict(torch.load("checkpoints/best_model.pt", map_location=device))
+missing, unexpected= model.load_state_dict(torch.load("checkpoints/best_model.pt", map_location=device))
+print("Missing:", missing)
+print("Unexpected:", unexpected)
 model.to(device)
 
 model.eval()

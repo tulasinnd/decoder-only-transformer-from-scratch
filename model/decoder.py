@@ -73,8 +73,8 @@ class MHA(nn.Module):
         K = K.reshape(batch, seq_len, self.num_heads, self.head_dim).transpose(1,2)
         V = V.reshape(batch, seq_len, self.num_heads, self.head_dim).transpose(1,2)
 
-        scores = torch.matmul(Q, K.transpose(-1,-2))/ math.sqrt(self.head_dim) 
-        causal_mask= torch.tril(torch.ones(seq_len, seq_len, device = X.device)) # create causal mask to prevent attending to future tokens
+        scores = torch.matmul(Q, K.transpose(-1,-2))/ math.sqrt(self.head_dim) # prevents large dot-product values
+        causal_mask= torch.tril(torch.ones(seq_len, seq_len, device = X.device)) #create causal mask(to buffer)to prevent attending to future tokens
         causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)
         scores = scores.masked_fill(causal_mask == 0, -1e9) 
         if padding_mask is not None: # optional padding mask to ignore padded tokens in attention
@@ -104,7 +104,7 @@ class FFN(nn.Module):
     def __init__(self, d_model):
         super().__init__()
         self.linear1 = nn.Linear(d_model, 4 * d_model)
-        self.relu = nn.ReLU()
+        self.relu = nn.GELU()
         self.linear2 = nn.Linear(4 * d_model, d_model)
 
     def forward(self, X):
@@ -205,7 +205,7 @@ class Decoder(nn.Module):
     def forward(self, input_ids, return_states=False, padding_mask=None,post_norm=False):
         states = {} if return_states else None
 
-        emb = self.token_embedding(input_ids)   # lookup token embeddings
+        emb = self.token_embedding(input_ids)   # lookup token embeddings and try scaling emb * math.sqrt(self.d_model)
         pos = self.positional_encoding(input_ids)       # add positional embeddings
         x = emb + pos
         x = self.embedding_dropout_layer(x)
