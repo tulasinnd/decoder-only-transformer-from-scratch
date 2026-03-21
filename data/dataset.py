@@ -50,3 +50,50 @@ def get_batch(tokens, batch_size, block_size, device):
 # total vocab
 def get_vocab_size():
     return tokenizer.vocab_size
+
+# dataset information (this function is not part of model architecture)
+def get_dataset_info(dataset=corpus, tokenizer=tokenizer):
+      
+    # Splits
+    train_data = dataset["train"]
+    val_data = dataset["validation"]
+    test_data = dataset["test"]
+    
+    # Sample counts
+    train_size = len(train_data)
+    val_size = len(val_data)
+    test_size = len(test_data)
+
+    # Token counts
+    def count_tokens(split):
+        total_tokens = 0
+        for example in split:
+            tokens = tokenizer.encode(example["text"])
+            total_tokens += len(tokens)
+        return total_tokens
+    
+    train_tokens = count_tokens(train_data)
+    val_tokens = count_tokens(val_data)
+    test_tokens = count_tokens(test_data)
+    
+    # Vocab info
+    vocab_size = tokenizer.vocab_size
+    
+    # Final dictionary
+    info = {       
+        "train_samples": train_size,
+        "val_samples": val_size,
+        "test_samples": test_size,
+        
+        "train_tokens": train_tokens,
+        "val_tokens": val_tokens,
+        "test_tokens": test_tokens,
+        
+        "vocab_size": vocab_size,
+    } 
+    return info
+
+info = get_dataset_info()
+
+for key, value in info.items():
+    print(f"{key}: {value}")
