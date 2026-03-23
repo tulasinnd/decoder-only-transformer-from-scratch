@@ -92,8 +92,3 @@ def get_dataset_info(dataset=corpus, tokenizer=tokenizer):
         "vocab_size": vocab_size,
     } 
     return info
-
-info = get_dataset_info()
-
-for key, value in info.items():
-    print(f"{key}: {value}")
