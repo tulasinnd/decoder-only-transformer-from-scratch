@@ -33,13 +33,15 @@ def get_lr(step, warmup_steps, total_steps, base_lr):
     return base_lr * 0.5 * (1 + math.cos(math.pi * min(progress, 1.0)))
 
 # train the decoder-only transformer on tokenized text data
-def train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,eval_iters, grad_clip=None):
+def train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,
+          eval_iters, start_step, steps_per_run, num_steps, best_val_loss, grad_clip=None):
     model.train()
     total_loss = 0.0
-    best_val_loss = float('inf')  # start with infinite loss for checkpoints
-    warmup_steps = max(100, int(0.05 * num_steps))
+    warmup_steps = max(100, int(0.05 * num_steps)) # 5% warmup
 
-    for step in range(1, num_steps + 1):
+    end_step = min(start_step + steps_per_run, num_steps)
+
+    for step in range(start_step, end_step + 1):
 
         # update learning rate
         lr = get_lr(step, warmup_steps, num_steps, learning_rate)
@@ -64,8 +66,6 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
 
         if grad_clip is not None:
             grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-        else:
-            grad_norm = 0.0
 
         optimizer.step()
 
@@ -79,14 +79,32 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
             val_loss = evaluate(model, tokenized_validation_text, criterion, device, batch_size, seq_len, eval_iters)
             ppl_eval = math.exp(val_loss)
 
-            print(f"Step {step}")
-            print(f"LR: {lr:.6f}")
-            print(f"Train Loss: {avg_loss:.4f} | Train PPL: {ppl_train:.2f} | Grad Norm: {grad_norm}") # log this for plotting
-            print(f"Valid Loss: {val_loss:.4f} | Validation PPL: {ppl_eval:.2f}")
+            grad_norm_str = f"{grad_norm:.2f}" if grad_clip is not None else "N/A"
+
+            print(
+                f"[Step {step:6d}] "
+                f"LR={lr:.6f} | "
+                f"Grad={grad_norm_str} | "
+                f"Train: {avg_loss:.4f} ({ppl_train:.2f}) | "
+                f"Val: {val_loss:.4f} ({ppl_eval:.2f})"
+            )
             total_loss = 0.0
 
             # checkpointing the best model with lowest validation loss
-            # if val_loss < best_val_loss:
-            #     best_val_loss = val_loss
-                # torch.save(model.state_dict(), "checkpoints/best_model.pt")
-                # print(f"Best model updated! at validation loss: {best_val_loss:.4f}")
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                torch.save({"model_state": model.state_dict(),
+                            "step": step,
+                            "val_loss": val_loss}, "checkpoints/best_model.pt")
+                print(f"Best model updated! at validation loss: {best_val_loss:.4f}")
+
+            # save resume checkpoint every eval
+            torch.save({
+                "model_state": model.state_dict(),
+                "optimizer_state": optimizer.state_dict(),
+                "step": step,
+                "best_val_loss": best_val_loss
+            }, "checkpoints/resume_checkpoint.pt")
+
+    if end_step == num_steps:
+        print("Training completed fully.")

@@ -17,10 +17,47 @@ vocab_size = get_vocab_size()
 model = Decoder(vocab_size, max_seq_len, d_model, num_heads, num_layers)
 model = model.to(device)
 
+# TRAINING WITH OPTIONAL RESUME
+# ---------------------------------------------------------------------------------
+optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+criterion = torch.nn.CrossEntropyLoss()
+
+# defaults
+start_step = 1
+best_val_loss = float("inf")
+# training control (use argparser)
+resume_input = input("Resume training? (y/n): ").strip().lower()
+resume = resume_input == "y"
+steps_per_run = int(input("Enter steps to run today (e.g., 5000): "))
+
+# resume
+if resume:
+    ckpt = torch.load("checkpoints/resume_checkpoint.pt", map_location=device)
+    model.load_state_dict(ckpt["model_state"])
+    optimizer.load_state_dict(ckpt["optimizer_state"])
+    start_step = ckpt["step"] + 1
+    best_val_loss = ckpt["best_val_loss"]
+    print(f"Resumed, Training from step {start_step} to {start_step + steps_per_run}")
+else:
+    print("No checkpoint found. Starting fresh.")
+
 # training
-optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate) # create optimizer
-criterion = torch.nn.CrossEntropyLoss() # create loss function
-train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,eval_iters,grad_clip=1.0)  # call training loop
+train(
+    model,
+    optimizer,
+    criterion,
+    tokenized_train_text,
+    tokenized_validation_text,
+    device,
+    eval_iters,
+    start_step=start_step,
+    steps_per_run=steps_per_run,
+    num_steps=num_steps,
+    best_val_loss=best_val_loss,
+    grad_clip=1.0
+)
+
+# ------------------------------------------------------------------------------
 
 # generation 
 input_ids, prompt= get_input_ids(tokenizer, device, seq_len)
