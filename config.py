@@ -6,11 +6,11 @@ max_seq_len = 128         # for flexible sequence length
 
 # Training Config
 batch_size = 16
-num_steps = 1500          # training iterations
+num_steps = 100000          # training iterations
 learning_rate = 3e-4
 # grad_clip_value = 1.0     # safe: 0.5–1.0 (prevents exploding gradients)
-eval_iters = 100
-print_every = 500         # logging frequency
+eval_iters = 500
+print_every = 1000         # logging frequency
 seed = 42
 seq_len = 64
 

@@ -8,28 +8,16 @@ corpus = load_dataset("wikitext", "wikitext-2-raw-v1") # dataset contains train,
 
 # tokenize and convert text to stream of token IDs
 def load_training_data():
-    texts = [row["text"] for row in corpus["train"]] # list of all text rows
-    full_train_text = "\n".join(texts) # join all the text
+    texts = [row["text"] for row in corpus["train"]]
+    enc = tokenizer(texts,add_special_tokens=False,return_attention_mask=False )
+    tokenized_train_text = torch.tensor([token for seq in enc["input_ids"] for token in seq]) # flattentorch.Size([2403644])
 
-    enc = tokenizer(
-        full_train_text,
-        add_special_tokens=False
-    ) 
-
-    tokenized_train_text = torch.tensor(enc["input_ids"]) # tokenize entire text, torch.Size([2403644])
-    
     return tokenized_train_text
 
 def load_validation_data():
     texts = [row["text"] for row in corpus["validation"]] # list of all text rows
-    full_validation_text = "\n".join(texts) # join all the text
-
-    enc = tokenizer(
-        full_validation_text,
-        add_special_tokens=False
-    ) 
-
-    tokenized_validation_text = torch.tensor(enc["input_ids"]) # tokenize entire text, torch.Size([2403644])
+    enc = tokenizer(texts,add_special_tokens=False,return_attention_mask=False ) 
+    tokenized_validation_text = torch.tensor([token for seq in enc["input_ids"] for token in seq]) # torch.Size([248461])
     
     return tokenized_validation_text
 
