@@ -26,9 +26,23 @@ criterion = torch.nn.CrossEntropyLoss()
 start_step = 1
 best_val_loss = float("inf")
 # training control (use argparser)
-resume_input = input("Resume training? (y/n): ").strip().lower()
-resume = resume_input == "y"
-steps_per_run = int(input("Enter steps to run today (e.g., 5000): "))
+# Validate yes/no input
+while True:
+    resume_input = input("Resume training? (y/n): ").strip().lower()
+    if resume_input in ("y", "n"):
+        resume = resume_input == "y"
+        break
+    else:
+        print("Invalid input! Please enter 'y' or 'n'.")
+
+# Validate steps input
+while True:
+    steps_input = input("Enter steps to run today (e.g., 5000): ").strip()
+    if steps_input.isdigit() and int(steps_input) > 0:
+        steps_per_run = int(steps_input)
+        break
+    else:
+        print("Invalid input! Please enter a positive integer.")
 
 # resume
 if resume:
