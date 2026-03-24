@@ -67,7 +67,7 @@ def get_input_ids(tokenizer, device, seq_len):
 
     prompt = input("Enter prompt text: ").strip() # Ask the user for a non-empty prompt
     while not prompt:
-        prompt = input("Prompt cannot be empty. Enter prompt text: ").strip()
+        prompt = input("Prompt cannot be empty. Enter 'quit' to exit or prompt to continue ").strip()
 
     input_ids = tokenizer(prompt, return_tensors="pt")["input_ids"].to(device) #  tokenize the prompt
     input_ids = input_ids[:, -seq_len:] # truncate the extra prompt safely.

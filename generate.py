@@ -10,13 +10,19 @@ device = get_device()
 # load model from checkpoint
 vocab_size = get_vocab_size()
 model = Decoder(vocab_size, max_seq_len, d_model, num_heads, num_layers)
-missing, unexpected= model.load_state_dict(torch.load("checkpoints/resume_checkpoint.pt", map_location=device))
+ckpt = torch.load("checkpoints/resume_checkpoint.pt", map_location=device)
+missing, unexpected = model.load_state_dict(ckpt["model_state"], strict=False)
 if missing: print("Missing:", missing)
 if unexpected: print("Unexpected:", unexpected)
 model.to(device)
 
+# text generation
 model.eval()
-# generate text 
-input_ids, prompt= get_input_ids(tokenizer, device, seq_len)
-gen_ids = generate(model, input_ids,max_new_tokens, temperature=0.5, top_p=0.9) 
-print_generation(tokenizer, gen_ids, prompt)
+while True:
+    input_ids, prompt = get_input_ids(tokenizer, device, seq_len)
+    if prompt.lower() == "quit":
+        print("Exiting generation.")
+        break  # stops the loop
+
+    gen_ids = generate(model, input_ids,max_new_tokens, temperature, top_p=0.8) 
+    print_generation(tokenizer, gen_ids, prompt)
