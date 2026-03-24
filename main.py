@@ -49,7 +49,7 @@ if resume:
     optimizer.load_state_dict(ckpt["optimizer_state"])
     start_step = ckpt["step"] + 1
     best_val_loss = ckpt["best_val_loss"]
-    print(f"Resumed, Training from step {start_step} to {start_step + steps_per_run}")
+    print(f"Resumed, Training from step {start_step} to {start_step - 1 + steps_per_run}")
 else:
     print("No checkpoint found. Starting fresh.")
 
@@ -70,7 +70,13 @@ train(
 )
 
 # ------------------------------------------------------------------------------
-# generation 
-input_ids, prompt= get_input_ids(tokenizer, device, seq_len)
-gen_ids = generate(model, input_ids,max_new_tokens, temperature, top_p=0.8) 
-print_generation(tokenizer, gen_ids, prompt)
+# text generation
+model.eval()
+while True:
+    input_ids, prompt = get_input_ids(tokenizer, device, seq_len)
+    if prompt.lower() == "quit":
+        print("Exiting generation.")
+        break  # stops the loop
+
+    gen_ids = generate(model, input_ids,max_new_tokens, temperature, top_p=0.8) 
+    print_generation(tokenizer, gen_ids, prompt)

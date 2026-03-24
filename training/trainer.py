@@ -136,7 +136,6 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
                 f"Train: {avg_loss:.4f} ({ppl_train:.2f}) | "
                 f"Val: {val_loss:.4f} ({ppl_eval:.2f}) | "
                 f"✶ |" if best_tok else ""  # indicates best model updated
-                f"✮" if best_tok else "" # indicates checkpoint updated after every 1000 steps
             )
     print ("Training complete for ",steps_per_run, "steps, Overall Progress is", end_step, " / ",num_steps)
     if end_step == num_steps:
