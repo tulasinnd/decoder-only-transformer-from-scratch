@@ -4,7 +4,7 @@ from transformers import GPT2TokenizerFast
 
 # BPE tokenizer
 tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
-corpus = load_dataset("wikitext", "wikitext-2-raw-v1") # dataset contains train, test, validate, text rows
+corpus = load_dataset("wikitext", "wikitext-2-raw-v1", download_mode="reuse_cache_if_exists") # dataset contains train, test, validate, text rows
 
 # tokenize and convert text to stream of token IDs
 def load_training_data():
