@@ -7,18 +7,12 @@ from utils.utils import set_seed,get_device
 set_seed(seed)
 device = get_device()
 
-dropout_config = {
-    "embedding": 0.2,
-    "attention": 0.2,
-    "residual": 0.2,
-}
-
 # load model from checkpoint
 vocab_size = get_vocab_size()
-model = Decoder(vocab_size, max_seq_len, d_model, num_heads, num_layers,dropout=dropout_config)
-missing, unexpected= model.load_state_dict(torch.load("checkpoints/best_model.pt", map_location=device))
-print("Missing:", missing)
-print("Unexpected:", unexpected)
+model = Decoder(vocab_size, max_seq_len, d_model, num_heads, num_layers)
+missing, unexpected= model.load_state_dict(torch.load("checkpoints/resume_checkpoint.pt", map_location=device))
+if missing: print("Missing:", missing)
+if unexpected: print("Unexpected:", unexpected)
 model.to(device)
 
 model.eval()

@@ -2,6 +2,7 @@ import torch
 import math
 from config import *
 from data.dataset import get_batch
+import os, csv
 
 @torch.no_grad()
 def evaluate(model, tokenized_validation_text, criterion, device, batch_size, seq_len, eval_iters=100):
@@ -37,9 +38,9 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
           eval_iters, start_step, steps_per_run, num_steps, best_val_loss, grad_clip=None):
     model.train()
     total_loss = 0.0
-    warmup_steps = max(100, int(0.05 * num_steps)) # 5% warmup
+    warmup_steps = max(100, int(0.10 * num_steps)) # 10% warmup
 
-    end_step = min(start_step + steps_per_run, num_steps)
+    end_step = min(start_step + steps_per_run -1, num_steps) # end_step = min(1 + 400 - 1, 100000) = 400
 
     for step in range(start_step, end_step + 1):
 
@@ -64,6 +65,7 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
         optimizer.zero_grad()
         loss.backward()
 
+        grad_norm = None
         if grad_clip is not None:
             grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
 
@@ -71,40 +73,71 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
 
         total_loss += loss.item()
 
-        # training progress logging
+        # evaluate
         if step % print_every == 0:
             avg_loss = total_loss / print_every
             ppl_train = math.exp(avg_loss)
 
             val_loss = evaluate(model, tokenized_validation_text, criterion, device, batch_size, seq_len, eval_iters)
             ppl_eval = math.exp(val_loss)
+            total_loss = 0.0
 
-            grad_norm_str = f"{grad_norm:.2f}" if grad_clip is not None else "N/A"
+            # checkpointing the best model with lowest validation loss
+            best_tok= False
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                best_tok=True
+                torch.save({"model_state": model.state_dict(),
+                            "step": step,
+                            "val_loss": val_loss}, "checkpoints/my_best_model.pt")
+
+            # save checkpoint 
+            check=False
+            if step % 1000 == 0:
+                check=True
+                torch.save({
+                            "model_state": model.state_dict(),
+                            "optimizer_state": optimizer.state_dict(),
+                            "step": step,
+                            "best_val_loss": best_val_loss
+                            }, "checkpoints/resume_checkpoint.pt")
+                
+            # -----------------------------
+            # Save metrics to CSV
+            metrics_file = "checkpoints/training_metrics.csv"
+            # create CSV if it doesn't exist
+            if not os.path.exists(metrics_file):
+                with open(metrics_file, "w", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        "step", "train_loss", "train_ppl", "val_loss", "val_ppl",
+                        "lr", "grad_norm", "best_model", "checkpoint_saved"
+                    ])
+            # append current metrics
+            with open(metrics_file, "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    step,
+                    avg_loss,
+                    ppl_train,
+                    val_loss,
+                    ppl_eval,
+                    lr,
+                    grad_norm if grad_clip is not None else "N/A",
+                    best_tok,
+                    check
+                ])
+            # -----------------------------
 
             print(
                 f"[Step {step:6d}] "
                 f"LR={lr:.6f} | "
-                f"Grad={grad_norm_str} | "
+                f"Grad={grad_norm} | "
                 f"Train: {avg_loss:.4f} ({ppl_train:.2f}) | "
-                f"Val: {val_loss:.4f} ({ppl_eval:.2f})"
+                f"Val: {val_loss:.4f} ({ppl_eval:.2f}) | "
+                f"✶ |" if best_tok else ""  # indicates best model updated
+                f"✮" if best_tok else "" # indicates checkpoint updated after every 1000 steps
             )
-            total_loss = 0.0
-
-            # checkpointing the best model with lowest validation loss
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                torch.save({"model_state": model.state_dict(),
-                            "step": step,
-                            "val_loss": val_loss}, "checkpoints/best_model.pt")
-                print(f"Best model updated! at validation loss: {best_val_loss:.4f}")
-
-            # save resume checkpoint every eval
-            torch.save({
-                "model_state": model.state_dict(),
-                "optimizer_state": optimizer.state_dict(),
-                "step": step,
-                "best_val_loss": best_val_loss
-            }, "checkpoints/resume_checkpoint.pt")
-
+    print ("Training complete for ",steps_per_run, "steps, Overall Progress is", end_step, " / ",num_steps)
     if end_step == num_steps:
         print("Training completed fully.")

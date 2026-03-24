@@ -26,25 +26,23 @@ criterion = torch.nn.CrossEntropyLoss()
 start_step = 1
 best_val_loss = float("inf")
 # training control (use argparser)
-# Validate yes/no input
 while True:
-    resume_input = input("Resume training? (y/n): ").strip().lower()
+    resume_input = input("Resume training? (y/n): ").strip().lower() # Validate yes/no input
     if resume_input in ("y", "n"):
         resume = resume_input == "y"
         break
     else:
         print("Invalid input! Please enter 'y' or 'n'.")
 
-# Validate steps input
 while True:
-    steps_input = input("Enter steps to run today (e.g., 5000): ").strip()
+    steps_input = input("Enter steps to run today (e.g., 5000): ").strip() # Validate steps input
     if steps_input.isdigit() and int(steps_input) > 0:
         steps_per_run = int(steps_input)
         break
     else:
         print("Invalid input! Please enter a positive integer.")
 
-# resume
+# optional resume
 if resume:
     ckpt = torch.load("checkpoints/resume_checkpoint.pt", map_location=device)
     model.load_state_dict(ckpt["model_state"])
@@ -72,7 +70,6 @@ train(
 )
 
 # ------------------------------------------------------------------------------
-
 # generation 
 input_ids, prompt= get_input_ids(tokenizer, device, seq_len)
 gen_ids = generate(model, input_ids,max_new_tokens, temperature, top_p=0.8) 
