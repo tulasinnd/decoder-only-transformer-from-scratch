@@ -28,11 +28,13 @@ pip install -r requirements.txt
 python main.py
 
 # Generate text using a trained checkpoint
-python generate.py --checkpoint checkpoints/<your-checkpoint>.pt
+python generate.py
 
 ## Example Generated Text
 Prompt: hello
-Generated: helloains and transport the economy is now home . At the ground , the main couple ends along the estimated in the Mediterranean . The game again finished with Nesbid and juniora started the north side . By 04 , and August 3 , the former
+Generated: helloains and transport the economy is now home . At the ground , the main couple 
+ends along the estimated in the Mediterranean . The game again finished with Nesbid and juniora 
+started the north side . By 04 , and August 3 , the former
 ```
 
 **Note:** This is an early-stage model trained on a limited dataset. Generated text may appear nonsensical. The implementation demonstrates full end-to-end autoregressive generation and will improve with further training and hyperparameter tuning.
