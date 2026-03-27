@@ -65,7 +65,7 @@ def generate(model, start_ids, max_new_tokens=10,temperature=temperature,top_k=N
 
 def get_input_ids(tokenizer, device, seq_len):    
 
-    prompt = input("Enter prompt text: ").strip() # Ask the user for a non-empty prompt
+    prompt = input("Enter prompt or 'quit' to exit: ").strip() # Ask the user for a non-empty prompt
     while not prompt:
         prompt = input("Prompt cannot be empty. Enter 'quit' to exit or prompt to continue ").strip()
 

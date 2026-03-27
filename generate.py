@@ -17,6 +17,7 @@ if unexpected: print("Unexpected:", unexpected)
 model.to(device)
 
 # text generation
+max_new_tokens=50
 model.eval()
 while True:
     input_ids, prompt = get_input_ids(tokenizer, device, seq_len)
