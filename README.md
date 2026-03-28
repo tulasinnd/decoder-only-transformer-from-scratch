@@ -39,3 +39,20 @@ started the north side . By 04 , and August 3 , the former
 
 **Note:** This is an early-stage model trained on a limited dataset. Generated text may appear nonsensical. The implementation demonstrates full end-to-end autoregressive generation and will improve with further training and hyperparameter tuning.
 
+## Model Architecture
+
+Input IDs
+   ↓
+Token Embeddings + Positional Embeddings
+   ↓
+Dropout
+   ↓
+[Repeated N times]
+   → LayerNorm
+   → Multi-Head Causal Self-Attention
+   → Residual Connection
+   → LayerNorm
+   → Feed Forward Network
+   → Residual Connection
+   ↓
+Final Linear Layer → Logits
