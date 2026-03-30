@@ -66,3 +66,50 @@ Dropout
     ▼
 Final Linear Layer → Logits
 ```
+
+## Training Details & Preliminary Logs
+
+> **Note:** The following parameters, metrics, and graphs are part of ongoing experiments. 
+> They may change as the model is further trained or hyperparameters are adjusted.
+
+### Model Hyperparameters (Preliminary)
+- **d_model:** 128
+- **num_heads:** 4
+- **num_layers:** 4
+- **max_seq_len:** 128
+
+### Training Configuration (Preliminary)
+- **batch_size:** 16
+- **num_steps:** 100000
+- **learning_rate:** 3e-4
+- **grad_clip_value:** 1.0
+- **eval_iters:** 100
+- **print_every:** 200
+- **seq_len:** 64
+- **seed:** 42
+
+### Regularization
+- embedding_dropout: 0.1  
+- attention_dropout: 0.1  
+- residual_dropout: 0.1  
+
+### Generation Settings
+- temperature: 0.8  
+- top_p: 0.8  
+- max_new_tokens: 20  
+
+### Training Metrics (Sample Logs)
+| Step   | Train Loss | Train PPL | Val Loss | Val PPL |
+|--------|------------|-----------|----------|---------|
+| 5,000  | 6.47       | 644       | 6.71     | 818     |
+| 10,000 | 5.85       | 348       | 6.15     | 467     |
+| 15,000 | 5.32       | 204       | 5.95     | 383     |
+| 20,000 | 4.99       | 146       | 5.88     | 357     |
+| 25,000 | 4.75       | 116       | 5.85     | 348     |
+| 30,000 | 4.57       | 97        | 5.85     | 346     |
+| 35,000 | 4.43       | 84        | 5.86     | 350     |
+
+### Training Graph (Preliminary)
+![Training Loss vs Validation Loss](checkpoints/loss_curve.png)
+
+> **Reminder:** The graph will be updated as the model trains further.
