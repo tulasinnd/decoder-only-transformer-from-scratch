@@ -16,10 +16,14 @@ seq_len = 64
 
 # Regularization
 embedding_dropout = 0.1       # used after emb+pos 
-attention_dropout = 0.1       # used inside MHA
+attention_dropout = 0.2       # used inside MHA
 residual_dropout = 0.1        # used after MHA and FFN outputs
 
 # Generation Config
 temperature = 1.0
 max_new_tokens = 20       # generated text length
 # top_p = 0.8
+
+# explore
+weight_tying = False
+post_norm = False

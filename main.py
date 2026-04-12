@@ -5,6 +5,7 @@ from data.dataset import load_training_data,load_validation_data,get_vocab_size,
 from training.trainer import train
 from generation.generation_utils import generate,get_input_ids,print_generation
 from utils.utils import set_seed,get_device
+import config
 set_seed(seed)
 device = get_device()
 
@@ -14,7 +15,7 @@ tokenized_validation_text=load_validation_data()
 
 # build model
 vocab_size = get_vocab_size()
-model = Decoder(vocab_size, max_seq_len, d_model, num_heads, num_layers)
+model = Decoder(vocab_size, max_seq_len, d_model, num_heads, num_layers,config)
 model = model.to(device)
 
 # TRAINING WITH OPTIONAL RESUME
@@ -78,5 +79,11 @@ while True:
         print("Exiting generation.")
         break  # stops the loop
 
-    gen_ids = generate(model, input_ids,max_new_tokens, temperature, top_p=0.8) 
+    gen_ids = gen_ids = generate(
+                                model,
+                                input_ids,
+                                config.max_new_tokens,
+                                config.temperature,
+                                config.max_seq_len,
+                                top_p=config.top_p )
     print_generation(tokenizer, gen_ids, prompt)

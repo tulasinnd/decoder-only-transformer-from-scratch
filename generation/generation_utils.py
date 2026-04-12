@@ -1,4 +1,4 @@
-from config import *
+# from config import *
 import torch
 import torch.nn.functional as F
 # from utils.utils import set_seed
@@ -29,7 +29,7 @@ def sample_top_p(logits, top_p=0.7):
     return next_token 
 
 @torch.no_grad()
-def generate(model, start_ids, max_new_tokens=10,temperature=temperature,top_k=None,top_p=None):
+def generate(model, start_ids, max_new_tokens, temperature, max_seq_len, top_k=None, top_p=None):
     if top_k is not None and top_p is not None:
         raise ValueError("Choose either top_k or top_p, not both.")
     

@@ -14,7 +14,6 @@ Components implemented:
 import torch
 import torch.nn as nn
 import math
-import config
 
 # IN: x (token IDs)
 # OUT: embedding vectors looked up from the vocabulary embedding table
@@ -47,7 +46,7 @@ class PositionalEncodings(nn.Module):
 # IN: input representations X
 # OUT: context-aware representations of X using causal self-attention
 class MHA(nn.Module):
-    def __init__(self, d_model, num_heads,attention_dropout=0.0):
+    def __init__(self, d_model, num_heads,attention_dropout):
         super().__init__()
         self.attn_dropout = nn.Dropout(attention_dropout)
         self.d_model= d_model
@@ -167,19 +166,15 @@ class DecoderLayer(nn.Module):
 
 # stacking multiple decoder layers
 class Decoder(nn.Module):
-    def __init__(self, vocab_size, max_seq_len, d_model, num_heads, num_layers, dropout=None,weight_tying=False):
+    def __init__(self, vocab_size, max_seq_len, d_model, num_heads, num_layers, config):
         super().__init__()
 
         self.d_model = d_model
+        self.post_norm = config.post_norm
         # load dropout values
-        if dropout is None:
-            self.embedding_dropout = config.embedding_dropout
-            self.attention_dropout = config.attention_dropout
-            self.residual_dropout = config.residual_dropout
-        else:
-            self.embedding_dropout = dropout.get("embedding", config.embedding_dropout)
-            self.attention_dropout = dropout.get("attention", config.attention_dropout)
-            self.residual_dropout = dropout.get("residual", config.residual_dropout)
+        self.embedding_dropout = config.embedding_dropout
+        self.attention_dropout = config.attention_dropout
+        self.residual_dropout = config.residual_dropout
 
         # embeddings
         self.token_embedding = Embeddings(vocab_size, d_model)
@@ -195,14 +190,14 @@ class Decoder(nn.Module):
         self.logit = Logit(d_model, vocab_size)
 
         # optional weight tying
-        if weight_tying:
+        if config.weight_tying:
             self.logit.linear.weight = self.token_embedding.embedding.weight
             print(self.logit.linear.weight.data_ptr() == self.token_embedding.embedding.weight.data_ptr())
 
         # embedding dropout
         self.embedding_dropout_layer = nn.Dropout(self.embedding_dropout)
 
-    def forward(self, input_ids, return_states=False, padding_mask=None,post_norm=False):
+    def forward(self, input_ids, return_states=False, padding_mask=None):
         states = {} if return_states else None
 
         emb = self.token_embedding(input_ids)   # lookup token embeddings and try scaling emb * math.sqrt(self.d_model)
@@ -215,10 +210,10 @@ class Decoder(nn.Module):
 
         for i, layer in enumerate(self.layers):         # pass representations through stacked decoder layers
             if return_states:
-                x, layer_states = layer(x, return_states=True,padding_mask=padding_mask,post_norm=post_norm)
+                x, layer_states = layer(x, return_states=True,padding_mask=padding_mask,post_norm=self.post_norm)
                 states[f"layer_{i}"] = layer_states
             else:
-                x = layer(x,padding_mask=padding_mask,post_norm=post_norm)
+                x = layer(x,padding_mask=padding_mask,post_norm=self.post_norm)
 
         logits = self.logit(x)                          # compute final logits
 
