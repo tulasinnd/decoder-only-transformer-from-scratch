@@ -35,7 +35,7 @@ def get_lr(step, warmup_steps, total_steps, base_lr):
 
 # train the decoder-only transformer on tokenized text data
 def train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,
-          eval_iters, start_step, steps_per_run, num_steps, best_val_loss, grad_clip=None):
+          eval_iters, start_step, steps_per_run, num_steps, best_val_loss, grad_clip):
     model.train()
     total_loss = 0.0
     warmup_steps = max(100, int(0.10 * num_steps)) # 10% warmup

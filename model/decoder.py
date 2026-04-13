@@ -166,10 +166,10 @@ class DecoderLayer(nn.Module):
 
 # stacking multiple decoder layers
 class Decoder(nn.Module):
-    def __init__(self, vocab_size, max_seq_len, d_model, num_heads, num_layers, config):
+    def __init__(self, vocab_size, config):
         super().__init__()
 
-        self.d_model = d_model
+        self.d_model = config.d_model
         self.post_norm = config.post_norm
         # load dropout values
         self.embedding_dropout = config.embedding_dropout
@@ -177,17 +177,17 @@ class Decoder(nn.Module):
         self.residual_dropout = config.residual_dropout
 
         # embeddings
-        self.token_embedding = Embeddings(vocab_size, d_model)
-        self.positional_encoding = PositionalEncodings(max_seq_len, d_model)
+        self.token_embedding = Embeddings(vocab_size, config.d_model)
+        self.positional_encoding = PositionalEncodings(config.max_seq_len, config.d_model)
 
         # decoder stack
         self.layers = nn.ModuleList(
-            [DecoderLayer(d_model, num_heads, self.attention_dropout, self.residual_dropout)
-             for _ in range(num_layers)]
+            [DecoderLayer(config.d_model, config.num_heads, self.attention_dropout, self.residual_dropout)
+             for _ in range(config.num_layers)]
         )
 
         # output projection
-        self.logit = Logit(d_model, vocab_size)
+        self.logit = Logit(config.d_model, vocab_size)
 
         # optional weight tying
         if config.weight_tying:

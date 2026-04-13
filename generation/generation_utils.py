@@ -4,7 +4,7 @@ import torch.nn.functional as F
 # from utils.utils import set_seed
 # set_seed(seed)
 
-def sample_top_k(logits, top_k=50):
+def sample_top_k(logits, top_k):
     topk_vals, topk_indices = torch.topk(logits, top_k)
     probs = F.softmax(topk_vals, dim=-1) # ignore all the other tokens except topk
 
@@ -13,7 +13,7 @@ def sample_top_k(logits, top_k=50):
 
     return next_token
 
-def sample_top_p(logits, top_p=0.7):
+def sample_top_p(logits, top_p):
     probs = F.softmax(logits, dim=-1) # Convert logits → probabilities    
     sorted_probs, sorted_indices = torch.sort(probs, descending=True) # sort probabilities (descending)
     cumulative_probs = torch.cumsum(sorted_probs, dim=-1) # compute cumulative probabilities
@@ -29,34 +29,32 @@ def sample_top_p(logits, top_p=0.7):
     return next_token 
 
 @torch.no_grad()
-def generate(model, start_ids, max_new_tokens, temperature, max_seq_len, top_k=None, top_p=None):
-    if top_k is not None and top_p is not None:
-        raise ValueError("Choose either top_k or top_p, not both.")
+def generate(model, start_ids, config):
     
     model.eval()
     ids = start_ids.clone()
 
-    for _ in range(max_new_tokens):
-        if ids.size(1) > max_seq_len:
-            ids = ids[:, -max_seq_len:]  # truncate before feeding
+    for _ in range(config.max_new_tokens):
+        if ids.size(1) > config.max_seq_len:
+            ids = ids[:, -config.max_seq_len:]  # truncate before feeding
 
         logits = model(ids)
         next_logits = logits[:, -1, :]      # last token
         
-        if temperature == 0:
+        if config.temperature == 0:
             next_id = torch.argmax(next_logits, dim=-1, keepdim=True) # greedy decoding when temp=0
 
         else:
-            scaled_logits = next_logits / temperature # temperature sampling applied
+            scaled_logits = next_logits / config.temperature # temperature sampling applied
 
-            if top_k is not None:
-                next_id = sample_top_k(scaled_logits, top_k) # use either top_k or top_p,
+            if config.sampling_strategy == "top_k":
+                next_id = sample_top_k(scaled_logits, config.top_k)
 
-            elif top_p is not None:
-                next_id = sample_top_p(scaled_logits, top_p)
+            elif config.sampling_strategy == "top_p":
+                next_id = sample_top_p(scaled_logits, config.top_p)
 
             else:
-                probs = F.softmax(scaled_logits, dim=-1) # temperature sampling over full vocabulary
+                probs = F.softmax(scaled_logits, dim=-1)
                 next_id = torch.multinomial(probs, 1)
 
         ids = torch.cat([ids, next_id], dim=1)

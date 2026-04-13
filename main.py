@@ -1,12 +1,11 @@
 import torch
 from model.decoder import Decoder
-from config import *
 from data.dataset import load_training_data,load_validation_data,get_vocab_size,tokenizer
 from training.trainer import train
 from generation.generation_utils import generate,get_input_ids,print_generation
 from utils.utils import set_seed,get_device
 import config
-set_seed(seed)
+set_seed(config.seed)
 device = get_device()
 
 # load dataset
@@ -15,12 +14,12 @@ tokenized_validation_text=load_validation_data()
 
 # build model
 vocab_size = get_vocab_size()
-model = Decoder(vocab_size, max_seq_len, d_model, num_heads, num_layers,config)
+model = Decoder(vocab_size,config)
 model = model.to(device)
 
 # TRAINING WITH OPTIONAL RESUME
 # ---------------------------------------------------------------------------------
-optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+optimizer = torch.optim.AdamW(model.parameters(), config.learning_rate)
 criterion = torch.nn.CrossEntropyLoss()
 
 # defaults
@@ -62,28 +61,22 @@ train(
     tokenized_train_text,
     tokenized_validation_text,
     device,
-    eval_iters,
+    config.eval_iters,
     start_step=start_step,
     steps_per_run=steps_per_run,
-    num_steps=num_steps,
+    num_steps=config.num_steps,
     best_val_loss=best_val_loss,
-    grad_clip=1.0
+    grad_clip=config.grad_clip
 )
 
 # ------------------------------------------------------------------------------
 # text generation
 model.eval()
 while True:
-    input_ids, prompt = get_input_ids(tokenizer, device, seq_len)
+    input_ids, prompt = get_input_ids(tokenizer, device, config.seq_len) # take prompt from user and convert it into ids
     if prompt.lower() == "quit":
         print("Exiting generation.")
         break  # stops the loop
 
-    gen_ids = gen_ids = generate(
-                                model,
-                                input_ids,
-                                config.max_new_tokens,
-                                config.temperature,
-                                config.max_seq_len,
-                                top_p=config.top_p )
-    print_generation(tokenizer, gen_ids, prompt)
+    gen_ids = generate(model, input_ids, config) # generate text intthe form of ids
+    print_generation(tokenizer, gen_ids, prompt) # convert generated ids to text and print it 
