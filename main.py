@@ -17,41 +17,22 @@ vocab_size = get_vocab_size()
 model = Decoder(vocab_size,config)
 model = model.to(device)
 
-# TRAINING WITH OPTIONAL RESUME
-# ---------------------------------------------------------------------------------
+# TRAINING WITH OPTIONAL RESUME 
 optimizer = torch.optim.AdamW(model.parameters(), config.learning_rate)
 criterion = torch.nn.CrossEntropyLoss()
 
-# defaults
 start_step = 1
 best_val_loss = float("inf")
-# training control (use argparser)
-while True:
-    resume_input = input("Resume training? (y/n): ").strip().lower() # Validate yes/no input
-    if resume_input in ("y", "n"):
-        resume = resume_input == "y"
-        break
-    else:
-        print("Invalid input! Please enter 'y' or 'n'.")
 
-while True:
-    steps_input = input("Enter steps to run today (e.g., 5000): ").strip() # Validate steps input
-    if steps_input.isdigit() and int(steps_input) > 0:
-        steps_per_run = int(steps_input)
-        break
-    else:
-        print("Invalid input! Please enter a positive integer.")
-
-# optional resume
-if resume:
+if config.resume:
     ckpt = torch.load("checkpoints/resume_checkpoint.pt", map_location=device)
     model.load_state_dict(ckpt["model_state"])
     optimizer.load_state_dict(ckpt["optimizer_state"])
     start_step = ckpt["step"] + 1
     best_val_loss = ckpt["best_val_loss"]
-    print(f"Resumed, Training from step {start_step} to {start_step - 1 + steps_per_run}")
+    print(f"Resumed, Training from step {start_step} to {config.num_steps}")
 else:
-    print("No checkpoint found. Starting fresh.")
+    print("Starting training fresh.")
 
 # training
 train(
@@ -63,13 +44,12 @@ train(
     device,
     config.eval_iters,
     start_step=start_step,
-    steps_per_run=steps_per_run,
     num_steps=config.num_steps,
     best_val_loss=best_val_loss,
-    grad_clip=config.grad_clip
+    grad_clip=config.grad_clip,
+    warmup_steps= config.warmup_steps
 )
 
-# ------------------------------------------------------------------------------
 # text generation
 model.eval()
 while True:

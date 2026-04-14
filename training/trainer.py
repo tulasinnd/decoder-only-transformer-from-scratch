@@ -35,14 +35,12 @@ def get_lr(step, warmup_steps, total_steps, base_lr):
 
 # train the decoder-only transformer on tokenized text data
 def train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,
-          eval_iters, start_step, steps_per_run, num_steps, best_val_loss, grad_clip):
+          eval_iters, start_step,num_steps, best_val_loss, grad_clip,warmup_steps):
     model.train()
     total_loss = 0.0
-    warmup_steps = max(100, int(0.10 * num_steps)) # 10% warmup
+    warmup_steps = max(10, warmup_steps) # 10% warmup
 
-    end_step = min(start_step + steps_per_run -1, num_steps) # end_step = min(1 + 400 - 1, 100000) = 400
-
-    for step in range(start_step, end_step + 1):
+    for step in range(start_step, num_steps + 1):
 
         # update learning rate
         lr = get_lr(step, warmup_steps, num_steps, learning_rate)
@@ -94,13 +92,20 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
             # save checkpoint 
             check=False
             if step % 1000 == 0:
-                check=True
-                torch.save({
-                            "model_state": model.state_dict(),
-                            "optimizer_state": optimizer.state_dict(),
-                            "step": step,
-                            "best_val_loss": best_val_loss
-                            }, "checkpoints/resume_checkpoint.pt")
+                check = True
+
+                ckpt_data = {
+                    "model_state": model.state_dict(),
+                    "optimizer_state": optimizer.state_dict(),
+                    "step": step,
+                    "best_val_loss": best_val_loss
+                }
+
+                # save step-based checkpoint (history)
+                torch.save(ckpt_data, f"checkpoints/checkpoint_step_{step}.pt")
+
+                # save latest checkpoint (for easy resume)
+                torch.save(ckpt_data, "checkpoints/latest_checkpoint.pt")
                 
             # -----------------------------
             # Save metrics to CSV
@@ -136,6 +141,4 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
                 f"Train: {avg_loss:.4f} ({ppl_train:.2f}) | "
                 f"Val: {val_loss:.4f} ({ppl_eval:.2f}) | "
             )
-    print ("Training complete for ",steps_per_run, "steps, Overall Progress is", end_step, " / ",num_steps)
-    if end_step == num_steps:
-        print("Training completed fully.")
+    print("Training completed fully.")
