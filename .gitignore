@@ -1,5 +1,6 @@
 gpt_env/
 checkpoints/
+exp_data/
 __pycache__/
 *.pyc
 .env

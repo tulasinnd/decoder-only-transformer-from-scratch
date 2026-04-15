@@ -87,7 +87,7 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
                 best_tok=True
                 torch.save({"model_state": model.state_dict(),
                             "step": step,
-                            "val_loss": val_loss}, "checkpoints/my_best_model.pt")
+                            "val_loss": val_loss}, "checkpoints/base/my_best_model.pt")
 
             # save checkpoint 
             check=False
@@ -102,14 +102,14 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
                 }
 
                 # save step-based checkpoint (history)
-                torch.save(ckpt_data, f"checkpoints/checkpoint_step_{step}.pt")
+                torch.save(ckpt_data, f"checkpoints/base/checkpoint_step_{step}.pt")
 
                 # save latest checkpoint (for easy resume)
-                torch.save(ckpt_data, "checkpoints/latest_checkpoint.pt")
+                torch.save(ckpt_data, "checkpoints/base/latest_checkpoint.pt")
                 
             # -----------------------------
             # Save metrics to CSV
-            metrics_file = "checkpoints/training_metrics.csv"
+            metrics_file = "checkpoints/base/training_metrics.csv"
             # create CSV if it doesn't exist
             if not os.path.exists(metrics_file):
                 with open(metrics_file, "w", newline="") as f:
