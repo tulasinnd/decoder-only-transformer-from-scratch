@@ -1,6 +1,5 @@
 import torch
 import math
-from config import *
 from data.dataset import get_batch
 import os, csv
 
@@ -34,8 +33,8 @@ def get_lr(step, warmup_steps, total_steps, base_lr):
     return base_lr * 0.5 * (1 + math.cos(math.pi * min(progress, 1.0)))
 
 # train the decoder-only transformer on tokenized text data
-def train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,
-          eval_iters, start_step,num_steps, best_val_loss, grad_clip,warmup_steps):
+def train(model, optimizer, criterion, tokenized_train_text, tokenized_validation_text, device,config,run_dir,
+          start_step,num_steps, best_val_loss,warmup_steps):
     model.train()
     total_loss = 0.0
     warmup_steps = max(10, warmup_steps) # 10% warmup
@@ -43,12 +42,12 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
     for step in range(start_step, num_steps + 1):
 
         # update learning rate
-        lr = get_lr(step, warmup_steps, num_steps, learning_rate)
+        lr = get_lr(step, warmup_steps, num_steps, config.learning_rate)
         for param_group in optimizer.param_groups:
             param_group["lr"] = lr
 
         # sample a training batch
-        X, Y = get_batch(tokenized_train_text, batch_size, seq_len, device=device)
+        X, Y = get_batch(tokenized_train_text, config.batch_size, config.seq_len, device=device)
 
         # forward pass
         logits = model(X)               # (B, S, V)
@@ -64,19 +63,19 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
         loss.backward()
 
         grad_norm = None
-        if grad_clip is not None:
-            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+        if config.grad_clip is not None:
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_clip)
 
         optimizer.step()
 
         total_loss += loss.item()
 
         # evaluate
-        if step % print_every == 0:
-            avg_loss = total_loss / print_every
+        if step % config.print_every == 0:
+            avg_loss = total_loss / config.print_every
             ppl_train = math.exp(avg_loss)
 
-            val_loss = evaluate(model, tokenized_validation_text, criterion, device, batch_size, seq_len, eval_iters)
+            val_loss = evaluate(model, tokenized_validation_text, criterion, device, config.batch_size, config.seq_len, config.eval_iters)
             ppl_eval = math.exp(val_loss)
             total_loss = 0.0
 
@@ -87,7 +86,7 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
                 best_tok=True
                 torch.save({"model_state": model.state_dict(),
                             "step": step,
-                            "val_loss": val_loss}, "checkpoints/base/my_best_model.pt")
+                            "val_loss": val_loss}, os.path.join(run_dir, "best_model.pt"))
 
             # save checkpoint 
             check=False
@@ -102,14 +101,15 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
                 }
 
                 # save step-based checkpoint (history)
-                torch.save(ckpt_data, f"checkpoints/base/checkpoint_step_{step}.pt")
-
+                torch.save( ckpt_data,
+                            os.path.join(run_dir, f"checkpoint_step_{step}.pt"))
                 # save latest checkpoint (for easy resume)
-                torch.save(ckpt_data, "checkpoints/base/latest_checkpoint.pt")
+                torch.save( ckpt_data,
+                            os.path.join(run_dir, "resume_checkpoint.pt"))
                 
             # -----------------------------
             # Save metrics to CSV
-            metrics_file = "checkpoints/base/training_metrics.csv"
+            metrics_file = os.path.join(run_dir, "metrics.csv")
             # create CSV if it doesn't exist
             if not os.path.exists(metrics_file):
                 with open(metrics_file, "w", newline="") as f:
@@ -128,7 +128,7 @@ def train(model, optimizer, criterion, tokenized_train_text, tokenized_validatio
                     val_loss,
                     ppl_eval,
                     lr,
-                    grad_norm if grad_clip is not None else "N/A",
+                    grad_norm if config.grad_clip is not None else "N/A",
                     best_tok,
                     check
                 ])
