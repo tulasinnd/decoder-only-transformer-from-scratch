@@ -6,3 +6,10 @@ __pycache__/
 .env
 env/
 note.txt
+test.py
+
+# ignore model checkpoints
+*.pt
+*.pth
+*.ckpt
+*.csv
