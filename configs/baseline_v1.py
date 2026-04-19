@@ -1,33 +1,39 @@
+# ================== BASELINE CONFIG ==================
+
 # Model Architecture
 d_model = 128
 num_heads = 4
 num_layers = 4
-max_seq_len = 128         # for flexible sequence length
+max_seq_len = 128
+seq_len = 64   # training chunk length
 
 # Training Config
 batch_size = 16
-num_steps = 1100              # total training iterations
-resume= False
-warmup_steps= 0.10 * num_steps  # 10%
+num_steps = 5000     
+resume= False     
 learning_rate = 3e-4
-grad_clip = 1.0                 # safe: 0.5–1.0 (prevents exploding gradients)
-eval_iters = 100
-print_every = 100               # logging frequency
+warmup_steps = int(0.1 * num_steps)
+grad_clip = 1.0
 seed = 42
-seq_len = 64
+
+# Logging / Eval
+eval_iters = 100
+print_every = 100
 
 # Regularization
-embedding_dropout = 0.1       # used after emb+pos 
-attention_dropout = 0.2       # used inside MHA
-residual_dropout = 0.1        # used after MHA and FFN outputs
+embedding_dropout = 0.1
+attention_dropout = 0.2
+residual_dropout = 0.1
 
-# Generation Config
+# Generation Config (for comparison only)
 temperature = 1.0
-max_new_tokens = 20             # generated text length
-sampling_strategy = "top_p"     # or "top_k" or "greedy"
+max_new_tokens = 20
+sampling_strategy = "top_p"
 top_p = 0.8
 top_k = 50
 
-# explore
+# Architecture choices
 weight_tying = False
-post_norm = False
+post_norm = False   # pre-norm transformer
+
+# ====================================================
