@@ -26,7 +26,6 @@ def load_config():
     exp_name = args.config.split(".")[-1]
 
     print("Using config:", args.config)
-    print("Experiment name:", exp_name)
 
     return config, exp_name
 
@@ -38,7 +37,7 @@ def main():
 
     run_dir = os.path.join("runs", exp_name)
     os.makedirs(run_dir, exist_ok=True)
-    print("Run directory:", run_dir)
+    print("Experiment results stored in directory: ", run_dir)
 
     # setup
     set_seed(config.seed)
