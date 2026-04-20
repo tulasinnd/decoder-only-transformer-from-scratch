@@ -19,7 +19,7 @@
 
 ## How to Run
 ```bash
-git clone https://github.com/<your-username>/decoder-only-transformer-from-scratch.git
+git clone https://github.com/tulasinnd/decoder-only-transformer-from-scratch.git
 cd decoder-only-transformer-from-scratch
 
 pip install -r requirements.txt

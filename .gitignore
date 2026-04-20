@@ -1,15 +1,20 @@
-gpt_env/
-checkpoints/
-exp_data/
 __pycache__/
 *.pyc
 .env
+
+# folders
 env/
-note.txt
-test.py
+R and E/
+PRESENT/
+checkpoints/
 
 # ignore model checkpoints
 *.pt
 *.pth
 *.ckpt
 *.csv
+
+# temp working files
+custom_tokenizer.py 
+note.txt
+test.py
